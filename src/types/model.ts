@@ -35,6 +35,7 @@ export interface BaseElement {
   url?: string
   status?: ElementStatus
   owner?: string
+  relationships?: Relationship[]
 }
 
 export interface Person extends BaseElement {
@@ -251,6 +252,7 @@ export interface CustomElement extends BaseElement {
 // ─── Model ───────────────────────────────────────────────────────────
 
 export interface Model {
+  properties?: Record<string, string>
   people: Person[]
   softwareSystems: SoftwareSystem[]
   customElements?: CustomElement[]
