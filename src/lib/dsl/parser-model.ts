@@ -175,12 +175,7 @@ export function parseModelBody(
             if (p.looksLikeRelationship()) {
                 const rel = parseRelationship(p)
                 if (rel) {
-                    const sourceCustom = model.customElements?.find(c => c.id === rel.sourceId)
-                    if (sourceCustom) {
-                        sourceCustom.relationships.push(rel)
-                    } else {
-                        model.relationships.push(rel)
-                    }
+                    model.relationships.push(rel)
                 }
                 continue
             }
@@ -804,7 +799,10 @@ function parseCustomElementBody(p: ContextAwareParser, ce: import('@/types/model
         if (token.type === 'IDENTIFIER') {
             if (p.looksLikeRelationship()) {
                 const rel = parseRelationship(p)
-                if (rel) ce.relationships.push(rel)
+                if (rel) {
+                    if (model) model.relationships.push(rel)
+                    else ce.relationships.push(rel)
+                }
                 continue
             }
             p.advance()

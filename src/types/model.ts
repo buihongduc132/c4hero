@@ -35,6 +35,7 @@ export interface BaseElement {
   url?: string
   status?: ElementStatus
   owner?: string
+  relationships?: Relationship[]
 }
 
 export interface Person extends BaseElement {
