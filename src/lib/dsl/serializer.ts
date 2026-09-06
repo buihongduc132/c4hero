@@ -5,6 +5,7 @@ import type {
     Workspace,
     Person,
     SoftwareSystem,
+    CustomElement,
     Container,
     Component,
     Relationship,
@@ -19,7 +20,6 @@ import type {
     DeploymentEnvironment,
     DeploymentNode,
     InfrastructureNode,
-    CustomElement,
 } from '@/types/model'
 
 const INDENT = '    ' // 4 spaces
@@ -78,22 +78,22 @@ class SerializerContext {
         this.workspace = workspace
         this.buildIdMaps()
         this.topLevelGroups = this.buildGroupScope(
-            [...(workspace.model.people ?? []), ...(workspace.model.softwareSystems ?? []), ...(workspace.model.customElements ?? [])],
+            [...workspace.model.people, ...workspace.model.softwareSystems, ...(workspace.model.customElements ?? [])],
             true,
         )
         this.hasNestedGroups ||= this.topLevelGroups.nested
-        for (const sys of workspace.model.softwareSystems ?? []) {
-            const containers = this.buildGroupScope(sys.containers ?? [])
+        for (const sys of workspace.model.softwareSystems) {
+            const containers = this.buildGroupScope(sys.containers)
             this.containerGroups.set(sys.id, containers)
             this.hasNestedGroups ||= containers.nested
-            for (const container of sys.containers ?? []) {
-                const components = this.buildGroupScope(container.components ?? [])
+            for (const container of sys.containers) {
+                const components = this.buildGroupScope(container.components)
                 this.componentGroups.set(container.id, components)
                 this.hasNestedGroups ||= components.nested
             }
         }
         if (this.hasNestedGroups) {
-            const badName = (workspace.model.groups ?? []).find(group => group.name.includes(GROUP_SEPARATOR))
+            const badName = workspace.model.groups.find(group => group.name.includes(GROUP_SEPARATOR))
             if (badName) {
                 throw new GroupSerializationError(
                     `Cannot export nested group "${badName.name}": group names may not contain `
@@ -116,7 +116,7 @@ class SerializerContext {
         includeGloballyEmpty = false,
     ): GroupScope<T> {
         const elementIds = new Set(elements.map(element => element.id))
-        const groups: ScopedGroup<T>[] = (this.workspace.model.groups ?? [])
+        const groups: ScopedGroup<T>[] = this.workspace.model.groups
             .map((group, order) => ({
                 group,
                 globalMemberIds: new Set(group.elementIds),
@@ -127,7 +127,7 @@ class SerializerContext {
             }))
             .filter(scoped => scoped.memberIds.size > 0 || (includeGloballyEmpty && scoped.group.elementIds.length === 0))
 
-        const allGroupsById = new Map((this.workspace.model.groups ?? []).map(group => [group.id, group]))
+        const allGroupsById = new Map(this.workspace.model.groups.map(group => [group.id, group]))
         const scopedById = new Map(groups.map(group => [group.group.id, group]))
         for (const scoped of groups) {
             const seen = new Set([scoped.group.id])
@@ -253,19 +253,16 @@ class SerializerContext {
     }
 
     private elementName(id: string): string {
-        for (const person of this.workspace.model.people ?? []) {
+        for (const person of this.workspace.model.people) {
             if (person.id === id) return `"${person.name}"`
         }
-        for (const sys of this.workspace.model.softwareSystems ?? []) {
+        for (const sys of this.workspace.model.softwareSystems) {
             if (sys.id === id) return `"${sys.name}"`
-            for (const container of sys.containers ?? []) {
+            for (const container of sys.containers) {
                 if (container.id === id) return `"${container.name}"`
-                const component = (container.components ?? []).find(item => item.id === id)
+                const component = container.components.find(item => item.id === id)
                 if (component) return `"${component.name}"`
             }
-        }
-        for (const custom of this.workspace.model.customElements ?? []) {
-            if (custom.id === id) return `"${custom.name}"`
         }
         return `element ${id}`
     }
@@ -273,20 +270,20 @@ class SerializerContext {
     private buildIdMaps(): void {
         const model = this.workspace.model
 
-        for (const person of model.people ?? []) {
+        for (const person of model.people) {
             this.registerElement(person.id)
         }
 
-        for (const sys of model.softwareSystems ?? []) {
+        for (const sys of model.softwareSystems) {
             this.registerElement(sys.id)
-            for (const container of sys.containers ?? []) {
+            for (const container of sys.containers) {
                 this.registerElement(container.id)
-                for (const comp of container.components ?? []) {
+                for (const comp of container.components) {
                     this.registerElement(comp.id)
                 }
             }
         }
-
+        
         for (const custom of model.customElements ?? []) {
             this.registerElement(custom.id)
         }
@@ -424,11 +421,11 @@ class SerializerContext {
         for (const [key, fieldVal] of derived) {
             if (fieldVal) {
                 props[key] = fieldVal
-            } else if (user && Object.prototype.hasOwnProperty.call(user, key)) {
+            } else if (Object.prototype.hasOwnProperty.call(user, key)) {
                 props[key] = user[key]
             }
         }
-        for (const [key, val] of Object.entries(user || {})) {
+        for (const [key, val] of Object.entries(user)) {
             if (!(key in props)) props[key] = val
         }
         return props
@@ -462,22 +459,8 @@ class SerializerContext {
 
         this.emitBlank()
         this.serializeModel()
-        if (ws.views && (
-            (ws.views.systemLandscapeViews && ws.views.systemLandscapeViews.length > 0) ||
-            (ws.views.systemContextViews && ws.views.systemContextViews.length > 0) ||
-            (ws.views.containerViews && ws.views.containerViews.length > 0) ||
-            (ws.views.componentViews && ws.views.componentViews.length > 0) ||
-            (ws.views.dynamicViews && ws.views.dynamicViews.length > 0) ||
-            (ws.views.deploymentViews && ws.views.deploymentViews.length > 0) ||
-            (ws.views.customViews && ws.views.customViews.length > 0) ||
-            (ws.views.configuration && (
-                (ws.views.configuration.styles && (ws.views.configuration.styles.elements?.length > 0 || ws.views.configuration.styles.relationships?.length > 0)) ||
-                (ws.views.configuration.themes && ws.views.configuration.themes.length > 0)
-            ))
-        )) {
-            this.emitBlank()
-            this.serializeViews()
-        }
+        this.emitBlank()
+        this.serializeViews()
 
         if (ws.scope && ws.scope !== 'none') {
             this.emitBlank()
@@ -525,8 +508,8 @@ class SerializerContext {
         }
 
         // Relationships
-        const rels = model.relationships ?? []
-        const customRels = (model.customElements ?? []).flatMap(c => c.relationships ?? [])
+        const rels = model.relationships || [];
+        const customRels = (model.customElements || []).flatMap(c => c.relationships || []);
         if (rels.length > 0 || customRels.length > 0) {
             this.emitBlank()
             for (const rel of rels) {
@@ -580,9 +563,9 @@ class SerializerContext {
     }
 
     private serializeModelElement(element: Person | SoftwareSystem | CustomElement): void {
-        if (element.type === 'person') this.serializePerson(element)
-        else if (element.type === 'softwareSystem') this.serializeSoftwareSystem(element)
-        else this.serializeCustomElement(element)
+        if (element.type === 'person') this.serializePerson(element as Person)
+        else if (element.type === 'custom') this.serializeCustomElement(element as CustomElement)
+        else this.serializeSoftwareSystem(element as SoftwareSystem)
     }
 
     // ─── Deployment ─────────────────────────────────────────────────
@@ -734,7 +717,7 @@ class SerializerContext {
         const extraTags = this.locationAwareTags(sys, ['Element', 'Software System'])
         const props = this.elementProperties(sys)
         const hasProperties = Object.keys(props).length > 0
-        const hasBody = (sys.containers && sys.containers.length > 0) || !!sys.url || hasProperties
+        const hasBody = sys.containers.length > 0 || !!sys.url || hasProperties
 
         const parts: string[] = []
         parts.push('softwareSystem')
@@ -831,6 +814,7 @@ class SerializerContext {
         }
     }
 
+
     private serializeCustomElement(custom: CustomElement): void {
         const varName = this.idToVar.get(custom.id)
         const defaults = ['Element']
@@ -839,15 +823,11 @@ class SerializerContext {
         const hasProperties = Object.keys(props).length > 0
         const hasBlock = !!custom.url || hasProperties
 
-        const parts: string[] = []
+        const parts = []
         parts.push('element')
         parts.push(`"${this.escapeString(custom.name)}"`)
         if (custom.metadata) parts.push(`"${this.escapeString(custom.metadata)}"`)
-        // The fixture DSL format: name metadata tags description
-        // If there are tags, description must be provided or tags push is enough?
-        // Let's always push metadata, tags, description if they are needed to reach the end.
         if (extraTags || custom.description) {
-            // we must ensure metadata is emitted even if undefined
             if (!custom.metadata && parts.length === 2) parts.push('""')
             if (extraTags && extraTags !== custom.metadata) {
                 parts.push(`"${extraTags}"`)
@@ -928,28 +908,28 @@ class SerializerContext {
         // Skip parser-synthesised views — they exist to give the canvas
         // something to render when the DSL declares no views; serializing them
         // would mutate the source DSL.
-        for (const view of views.systemLandscapeViews ?? []) {
+        for (const view of views.systemLandscapeViews) {
             if (view.autoView) continue
             if (needsBlank) this.emitBlank()
             this.serializeView(view)
             needsBlank = true
         }
 
-        for (const view of views.systemContextViews ?? []) {
+        for (const view of views.systemContextViews) {
             if (view.autoView) continue
             if (needsBlank) this.emitBlank()
             this.serializeView(view)
             needsBlank = true
         }
 
-        for (const view of views.containerViews ?? []) {
+        for (const view of views.containerViews) {
             if (view.autoView) continue
             if (needsBlank) this.emitBlank()
             this.serializeView(view)
             needsBlank = true
         }
 
-        for (const view of views.componentViews ?? []) {
+        for (const view of views.componentViews) {
             if (view.autoView) continue
             if (needsBlank) this.emitBlank()
             this.serializeView(view)
@@ -978,57 +958,17 @@ class SerializerContext {
         }
 
         // Styles — sanitize and filter once; emission reuses the result.
-        if (views.configuration) {
-            const styles = this.emittableStyles(views.configuration)
-            if (styles.elements.length > 0 || styles.relationships.length > 0) {
-                if (needsBlank) this.emitBlank()
-                this.serializeStyles(styles)
-                needsBlank = true
-            }
-
-            // Themes
-            if (views.configuration.themes && views.configuration.themes.length > 0) {
-                if (needsBlank) this.emitBlank()
-                this.emit(`themes ${views.configuration.themes.map(t => `"${this.escapeString(t)}"`).join(' ')}`)
-                needsBlank = true
-            }
+        const styles = this.emittableStyles(views.configuration)
+        if (styles.elements.length > 0 || styles.relationships.length > 0) {
+            if (needsBlank) this.emitBlank()
+            this.serializeStyles(styles)
+            needsBlank = true
         }
 
-        this.depth--
-        this.emit('}')
-    }
-
-    private serializeCustomView(view: View): void {
-        const parts: string[] = ['custom']
-        
-        if (view.key && !view.autoKey) {
-            parts.push(`"${this.escapeString(view.key)}"`)
-        }
-        
-        if (view.description) {
-            if (parts.length === 1) parts.push('""')
-            parts.push(`"${this.escapeString(view.description)}"`)
-        }
-
-        this.emit(`${parts.join(' ')} {`)
-        this.depth++
-
-        if (view.title) {
-            this.emit(`title "${this.escapeString(view.title)}"`)
-        }
-
-        const hasWildcard = view.elements.some(e => e.id === '*')
-        if (hasWildcard) {
-            this.emit('include *')
-        } else if (view.elements.length > 0) {
-            for (const el of view.elements) {
-                const ref = this.idToVar.get(el.id) ?? el.id
-                this.emit(`include ${ref}`)
-            }
-        }
-
-        if (view.autoLayout) {
-            this.serializeAutoLayout(view.autoLayout)
+        // Themes
+        if (views.configuration.themes && views.configuration.themes.length > 0) {
+            if (needsBlank) this.emitBlank()
+            this.emit(`themes ${views.configuration.themes.map(t => `"${this.escapeString(t)}"`).join(' ')}`)
         }
 
         this.depth--
@@ -1253,6 +1193,44 @@ class SerializerContext {
         this.emit(parts.join(' '))
     }
 
+
+    private serializeCustomView(view: View): void {
+        const parts: string[] = ['custom']
+        
+        if (view.key && !view.autoKey) {
+            parts.push(`"${this.escapeString(view.key)}"`)
+        }
+        
+        if (view.description) {
+            if (parts.length === 1) parts.push('""')
+            parts.push(`"${this.escapeString(view.description)}"`)
+        }
+
+        this.emit(`${parts.join(' ')} {`)
+        this.depth++
+
+        if (view.title) {
+            this.emit(`title "${this.escapeString(view.title)}"`)
+        }
+
+        const hasWildcard = view.elements.some(e => e.id === '*')
+        if (hasWildcard) {
+            this.emit('include *')
+        } else if (view.elements.length > 0) {
+            for (const el of view.elements) {
+                const ref = this.idToVar.get(el.id) ?? el.id
+                this.emit(`include ${ref}`)
+            }
+        }
+
+        if (view.autoLayout) {
+            this.serializeAutoLayout(view.autoLayout)
+        }
+
+        this.depth--
+        this.emit('}')
+    }
+
     // ─── Styles ─────────────────────────────────────────────────────
 
     /**
@@ -1376,8 +1354,7 @@ class SerializerContext {
         return this.escapeString(tag.replace(/,/g, ''))
     }
 
-    private getExtraTags(tags: string[] | undefined, defaults: string[]): string | undefined {
-        if (!tags) return undefined
+    private getExtraTags(tags: string[], defaults: string[]): string | undefined {
         const extra = tags
             .filter(t => !defaults.includes(t))
             .map(t => this.sanitizeTag(t))
