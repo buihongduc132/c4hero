@@ -721,6 +721,7 @@ function parseCustomElement(p: ContextAwareParser, varName?: string, model?: Mod
         id,
         type: 'custom',
         name,
+        tags: [],
         properties: {},
         relationships: [],
     }

@@ -2,7 +2,7 @@ import { exec } from 'child_process'
 import { promisify } from 'util'
 import * as fs from 'fs'
 import * as path from 'path'
-import { Model } from '@/types/model'
+import type { Model } from '@/types/model'
 
 const execAsync = promisify(exec)
 
@@ -61,7 +61,7 @@ export async function ValidateDsl(dsl: string): Promise<{ ok: boolean; canonical
         
         // Write DSL to volume using alpine
         await new Promise<void>((resolve, reject) => {
-            const child = exec(`docker run -i --rm -v ${volName}:/usr/local/structurizr alpine sh -c "cat > /usr/local/structurizr/workspace.dsl && chmod 777 /usr/local/structurizr/workspace.dsl && chmod 777 /usr/local/structurizr"`, (err) => {
+            const child = exec(`docker run -i --rm -v ${volName}:/usr/local/structurizr alpine sh -c "cat > /usr/local/structurizr/workspace.dsl && chmod 777 /usr/local/structurizr/workspace.dsl && chmod 777 /usr/local/structurizr"`, (err: any) => {
                 if (err) reject(err)
                 else resolve()
             })
@@ -94,7 +94,6 @@ export function diffModels(c4heroModel: Model, oracleCanonical: any): string[] {
     // Minimal diff harness for o-3: compare c4heroModel entities to oracleCanonical model
     const oracleModel = oracleCanonical?.model || {}
     const oracleSystems = oracleModel.softwareSystems || []
-    const oraclePeople = oracleModel.people || []
     const oracleContainers = oracleSystems.flatMap((s: any) => s.containers || [])
     const oracleCustomElements = oracleModel.customElements || []
 

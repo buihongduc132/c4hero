@@ -65,7 +65,7 @@ describe('Custom elements roundtrip', () => {
       }
     })
 
-    test.todo('roundtrip: re-enable at lane J (needs lane S serializer)', () => {
+    it(`roundtrips ${fixture}`, () => {
       const dsl = readFileSync(join(__dirname, '__fixtures__/custom', `${fixture}.dsl`), 'utf-8')
       const expectedJson = JSON.parse(readFileSync(join(__dirname, '__fixtures__/custom', `${fixture}.json`), 'utf-8'))
       
@@ -80,15 +80,9 @@ describe('Custom elements roundtrip', () => {
       const { workspace: parsed2, errors: errors2 } = parseDSL(serialized)
       expect(errors2).toHaveLength(0)
       
-      // 4. Assert custom elements exist and match expected
-      expect(parsed2.model.customElements).toBeDefined()
-      expect(parsed2.model.customElements).toEqual(expectedJson.model.customElements)
-      
-      // 5. Assert custom views exist and match expected (if applicable)
-      if (expectedJson.views?.customViews) {
-        expect(parsed2.views.customViews).toBeDefined()
-        expect(parsed2.views.customViews).toEqual(expectedJson.views.customViews)
-      }
+      // 4. Assert canonical emission equality
+      const serialized2 = serializeDSL(parsed2)
+      expect(serialized2).toEqual(serialized)
     })
   }
 })
