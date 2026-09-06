@@ -26,7 +26,7 @@ describe('DSL relationship round-trip', () => {
     const ws = makeWs()
     const dsl = serializeDSL(ws)
     const { workspace: parsed, errors } = parseDSL(dsl)
-    console.log(errors); expect(errors).toHaveLength(0)
+    expect(errors).toHaveLength(0)
     expect(parsed.model.relationships).toHaveLength(1)
     const rel = parsed.model.relationships[0]
     expect(rel.sourceId).toBe(parsed.model.people[0].id)
@@ -60,7 +60,7 @@ describe('DSL relationship round-trip', () => {
     } as View)
     const dsl = serializeDSL(ws)
     const { workspace: parsed, errors } = parseDSL(dsl)
-    console.log(errors); expect(errors).toHaveLength(0)
+    expect(errors).toHaveLength(0)
     const view = parsed.views.systemLandscapeViews[0]
     expect(view).toBeDefined()
     expect(view.relationships.length).toBe(1)
@@ -96,7 +96,7 @@ describe('DSL relationship round-trip', () => {
 
     const dsl = serializeDSL(ws)
     const { workspace: parsed, errors } = parseDSL(dsl)
-    console.log(errors); expect(errors).toHaveLength(0)
+    expect(errors).toHaveLength(0)
 
     expect(parsed.model.people[0].tags).toContain('Ops Reviewer')
     expect(parsed.model.softwareSystems[0].description).toBe('Charges cards, retries jobs, and owns awkward whitespace')
@@ -276,7 +276,7 @@ describe('Big Bank round-trip', () => {
     const ws = makeBigBankWorkspace()
     const dsl = serializeDSL(ws)
     const { errors } = parseDSL(dsl)
-    console.log(errors); expect(errors).toHaveLength(0)
+    expect(errors).toHaveLength(0)
   })
 
   it('preserves people count after round-trip', () => {
@@ -355,7 +355,7 @@ describe('Workspace with groups round-trip', () => {
     }
     const dsl = serializeDSL(ws)
     const { workspace: parsed, errors } = parseDSL(dsl)
-    console.log(errors); expect(errors).toHaveLength(0)
+    expect(errors).toHaveLength(0)
     expect(parsed.model.groups).toHaveLength(2)
     expect(parsed.model.groups.find(g => g.name === 'Team Alpha')).toBeDefined()
     expect(parsed.model.groups.find(g => g.name === 'Team Beta')).toBeDefined()
@@ -425,7 +425,7 @@ describe('Workspace with custom element styles round-trip', () => {
     }
     const dsl = serializeDSL(ws)
     const { workspace: parsed, errors } = parseDSL(dsl)
-    console.log(errors); expect(errors).toHaveLength(0)
+    expect(errors).toHaveLength(0)
     const elemStyles = parsed.views.configuration.styles.elements
     expect(elemStyles.length).toBeGreaterThanOrEqual(2)
     const dbStyle = elemStyles.find(s => s.tag === 'Database')
@@ -459,7 +459,7 @@ describe('Workspace with custom element styles round-trip', () => {
     }
     const dsl = serializeDSL(ws)
     const { workspace: parsed, errors } = parseDSL(dsl)
-    console.log(errors); expect(errors).toHaveLength(0)
+    expect(errors).toHaveLength(0)
     const relStyles = parsed.views.configuration.styles.relationships
     expect(relStyles.some(s => s.tag === 'Sync' && s.color === '#00ff00')).toBe(true)
   })
@@ -494,7 +494,7 @@ describe('Workspace with autoLayout BT direction round-trip', () => {
     }
     const dsl = serializeDSL(ws)
     const { workspace: parsed, errors } = parseDSL(dsl)
-    console.log(errors); expect(errors).toHaveLength(0)
+    expect(errors).toHaveLength(0)
     const view = parsed.views.systemLandscapeViews[0]
     expect(view.autoLayout).toBeDefined()
     expect(view.autoLayout!.direction).toBe('BT')
@@ -528,7 +528,7 @@ describe('Workspace with autoLayout BT direction round-trip', () => {
     }
     const dsl = serializeDSL(ws)
     const { workspace: parsed, errors } = parseDSL(dsl)
-    console.log(errors); expect(errors).toHaveLength(0)
+    expect(errors).toHaveLength(0)
     expect(parsed.views.systemLandscapeViews[0].autoLayout!.direction).toBe('LR')
   })
 
@@ -558,7 +558,7 @@ describe('Workspace with autoLayout BT direction round-trip', () => {
     }
     const dsl = serializeDSL(ws)
     const { workspace: parsed, errors } = parseDSL(dsl)
-    console.log(errors); expect(errors).toHaveLength(0)
+    expect(errors).toHaveLength(0)
     expect(parsed.views.systemLandscapeViews[0].autoLayout!.direction).toBe('RL')
   })
 
@@ -588,7 +588,7 @@ describe('Workspace with autoLayout BT direction round-trip', () => {
     }
     const dsl = serializeDSL(ws)
     const { workspace: parsed, errors } = parseDSL(dsl)
-    console.log(errors); expect(errors).toHaveLength(0)
+    expect(errors).toHaveLength(0)
     expect(parsed.views.systemLandscapeViews[0].autoLayout!.direction).toBe('TB')
   })
 })
@@ -643,7 +643,7 @@ describe('Complex workspace round-trip', () => {
     }
     const dsl = serializeDSL(ws)
     const { workspace: parsed, errors } = parseDSL(dsl)
-    console.log(errors); expect(errors).toHaveLength(0)
+    expect(errors).toHaveLength(0)
 
     // People
     expect(parsed.model.people).toHaveLength(1)
